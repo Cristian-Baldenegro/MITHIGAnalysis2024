@@ -1,21 +1,21 @@
 #!/bin/bash
-MAXCORES=120
+MAXCORES=60
 SAMPLEID=0
 
 echo "Running on sample ID: $SAMPLEID"
 
 if [ "$SAMPLEID" -eq 0 ]; then
-    NAMEMC="SkimMC2018PbPb_Version20241220_InputForest_20241217_DiJet_pThat-15_TuneCP5_HydjetDrumMB_5p02TeV_Pythia8_FIXEDDR"
-    FOLDER="/data00/g2ccbar/mc2018/forest_12172024"
+    NAMEMC="SkimMC2018PbPb_Version20250210_InputForest_20250129_DiJet_pThat-15_TuneCP5_HydjetDrumMB_5p02TeV_Pythia8_FIXEDDR"
+    FOLDER="/data00/g2ccbar/mc2018/forest_01282025"
 fi
 echo "Running on sample: $NAMEMC"
 echo "Running on folder: $FOLDER"
 
-OUTPUTMC="outputMC"
+OUTPUTMC="outputMCtest"
 counter=0
 filelistMC="filelist.txt"
 MERGEDOUTPUTMC="$NAMEMC"
-MERGEDOUTPUTMCFILE="$NAMEMC/mergedfile.root"
+MERGEDOUTPUTMCFILE="$NAMEMC/mergedfile_02102025.root"
 
 rm -rf $MERGEDOUTPUTMC
 mkdir $MERGEDOUTPUTMC
@@ -48,7 +48,7 @@ while IFS= read -r file; do
             --IsData false \
             --IsPP false \
             --Output "$OUTPUTMC/output_$counter.root" \
-            --MinJetPT 80 --Fraction 1.0 & 
+            --MinJetPT 15 --Fraction 1.0 & 
     ((counter++))
     wait_for_slot
 done < "$filelistMC"
