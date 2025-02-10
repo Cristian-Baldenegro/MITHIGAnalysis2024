@@ -95,6 +95,7 @@ int main(int argc, char *argv[]) {
       MMuMuJet.Event = MEvent.Event;
       MMuMuJet.hiBin = MEvent.hiBin;
       MMuMuJet.hiHF = MEvent.hiHF;
+      MMuMuJet.EventWeight = MEvent.weight;
       MMuMuJet.NPU = 0;
       if (MEvent.npus->size() == 9)
         MMuMuJet.NPU = MEvent.npus->at(5);
@@ -108,7 +109,7 @@ int main(int argc, char *argv[]) {
       ////////////////////////////
 
       MMuMuJet.NVertex = 0;
-      int BestVertex = -1;
+/*      int BestVertex = -1;
       for (int i = 0; i < (IsPP ? MTrackPP.nVtx : MTrack.VX->size()); i++) {
         if (IsPP == true && (BestVertex < 0 || MTrackPP.sumPtVtx[i] > MTrackPP.sumPtVtx[BestVertex]))
           BestVertex = i;
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
         MMuMuJet.VYError = IsPP ? MTrackPP.yVtxErr[BestVertex] : MTrack.VYError->at(BestVertex);
         MMuMuJet.VZError = IsPP ? MTrackPP.zVtxErr[BestVertex] : MTrack.VZError->at(BestVertex);
       }
-
+*/
       /////////////////////////////////////
       ////////// Event selection //////////
       /////////////////////////////////////
@@ -156,8 +157,8 @@ int main(int argc, char *argv[]) {
           // HLT trigger to select dimuon events, see Kaya's note: AN2019_143_v12, p.5
           //  FIXME: need to be replaced with the actual PbPb triggers
           int HLT_HIL3DoubleMuOpen_2018 = MTrigger.CheckTriggerStartWith("HLT_HIL3DoubleMu");
-          if (HLT_HIL3DoubleMuOpen_2018 == 0)
-            continue;
+//          if (HLT_HIL3DoubleMuOpen_2018 == 0)
+//            continue;
         }
       }
 
@@ -170,12 +171,17 @@ int main(int argc, char *argv[]) {
                           MJet.JetPFCHF[ijet] > 0. && MJet.JetPFCHM[ijet] > 0. && MJet.JetPFCEF[ijet] < 0.80;
         if (!passPurity)
           continue;
+	cout << MJet.JetPT[ijet]/MJet.GenPT[ijet] << endl;
         MMuMuJet.MJTHadronFlavor->push_back(MJet.MJTHadronFlavor[ijet]);
         MMuMuJet.MJTNcHad->push_back(MJet.MJTNcHad[ijet]);
         MMuMuJet.MJTNbHad->push_back(MJet.MJTNbHad[ijet]);
         MMuMuJet.JetPT->push_back(MJet.JetPT[ijet]);
         MMuMuJet.JetEta->push_back(MJet.JetEta[ijet]);
         MMuMuJet.JetPhi->push_back(MJet.JetPhi[ijet]);
+	MMuMuJet.genJetPT->push_back(MJet.GenPT[ijet]);
+        MMuMuJet.genJetEta->push_back(MJet.GenEta[ijet]);
+        MMuMuJet.genJetPhi->push_back(MJet.GenPhi[ijet]);
+
         bool isJetTagged = false;
         float muPt1 = -999.;
         float muPt2 = -999.;
@@ -290,7 +296,8 @@ int main(int argc, char *argv[]) {
           muDphi = DeltaPhi(muPhi1, muPhi2);
           muDR = sqrt(muDeta * muDeta + muDphi * muDphi);
         } // end if dimuon pair found
-        MMuMuJet.IsMuMuTagged->push_back(isJetTagged);
+	if (isJetTagged == true) cout << "reco-level: " << muPt1 << " " << muPt2 << endl;
+	MMuMuJet.IsMuMuTagged->push_back(isJetTagged);
         MMuMuJet.muPt1->push_back(muPt1);
         MMuMuJet.muPt2->push_back(muPt2);
         MMuMuJet.muEta1->push_back(muEta1);
@@ -318,81 +325,224 @@ int main(int argc, char *argv[]) {
         MMuMuJet.muDphi->push_back(muDphi);
         MMuMuJet.muDR->push_back(muDR);
 
+
+         /////////////////
+	 //Gen muon info//
+	 //////////////////
+
+
+         TLorentzVector VGenZ, VGenMu1, VGenMu2;
+
+
+
+	 maxmumuPt = -999;
+	 maxMu1Index = -1;
+	 maxMu2Index = -1;
+	  bool genIsJetMuonTagged = false;
+          float genMuPt1 = -999;
+          float genMuPt2 = -999;
+	  float genMuEta1 = -999; 
+          float genMuEta2 = -999; 
+          float genMuPhi1 = -999;
+          float genMuPhi2 = -999; 
+
+
+          float genMuMuMass = -999;
+          float genMuMuEta = -999;
+          float genMuMuY = -999;
+          float genMuMuPhi = -999;
+          float genMuMuPt = -999;
+
+          float genMuDeta = -999 ;
+          float genMuDphi = -999 ;
+          float genMuDR = -999;
+
+
+//         cout << MMu.NGen << endl;
+	 if(MMu.NGen > 1  )
+         {
+              float jetEta = MJet.JetEta[ijet];
+              float jetPhi = MJet.JetPhi[ijet];
+            for(int igen1 = 0; igen1 < MMu.NGen; igen1++)
+            {
+               VGenMu1.SetPtEtaPhiM(MMu.GenPT[igen1],
+                     MMu.GenEta[igen1],
+                     MMu.GenPhi[igen1],
+                     M_MU);
+
+               for(int igen2 = igen1 + 1; igen2 < MMu.NGen; igen2++)
+               {
+                  VGenMu2.SetPtEtaPhiM(MMu.GenPT[igen2],
+                        MMu.GenEta[igen2],
+                        MMu.GenPhi[igen2],
+                        M_MU);
+
+              float dPhiMu1Jet_ = DeltaPhi(MMu.GenPhi[igen1], jetPhi);
+              float dEtaMu1Jet_ = MMu.GenEta[igen1] - jetEta;
+              float dPhiMu2Jet_ = DeltaPhi(MMu.GenPhi[igen2], jetPhi);
+              float dEtaMu2Jet_ = MMu.GenEta[igen2] - jetEta;
+              float dRMu1Jet = sqrt(dPhiMu1Jet_*dPhiMu1Jet_ + dEtaMu1Jet_*dEtaMu1Jet_);
+              float dRMu2Jet = sqrt(dPhiMu2Jet_*dPhiMu2Jet_ + dEtaMu2Jet_*dEtaMu2Jet_);
+              if (dRMu1Jet > 0.3) continue;
+              if (dRMu2Jet > 0.3) continue;
+//	      cout << "gen-level: " << MMu.GenPT[igen1] << " " << MMu.GenPT[igen2] << endl;
+
+              TLorentzVector Mu1, Mu2;
+              Mu1.SetPtEtaPhiM(MMu.GenPT[igen1], MMu.GenEta[igen1], MMu.GenPhi[igen1], M_MU);
+              Mu2.SetPtEtaPhiM(MMu.GenPT[igen2], MMu.GenEta[igen2], MMu.GenPhi[igen2], M_MU);
+
+              TLorentzVector MuMu = Mu1 + Mu2;
+
+              if (MuMu.Pt() > maxmumuPt) {
+
+		maxmumuPt = MuMu.Pt();
+		maxMu1Index = igen1;
+		maxMu2Index = igen2;
+	      } // end if dimuon pT larger than current max
+
+               }
+            }
+
+        if (maxmumuPt > 0. && maxMu1Index >= 0 && maxMu2Index >= 0) {
+          genIsJetMuonTagged = true;
+          genMuPt1 = MMu.GenPT[maxMu1Index];
+          genMuPt2 = MMu.GenPT[maxMu2Index];
+	  genMuEta1 = MMu.GenEta[maxMu1Index]; 
+          genMuEta2 = MMu.GenEta[maxMu2Index]; 
+          genMuPhi1 = MMu.GenPhi[maxMu1Index];
+          genMuPhi2 = MMu.GenPhi[maxMu2Index]; 
+
+          TLorentzVector Mu1, Mu2;
+          Mu1.SetPtEtaPhiM(genMuPt1, genMuEta1, genMuPhi1, M_MU);
+          Mu2.SetPtEtaPhiM(genMuPt2, genMuEta2, genMuPhi2, M_MU);
+
+          TLorentzVector MuMu = Mu1 + Mu2;
+          genMuMuMass = MuMu.M();
+          genMuMuEta = MuMu.Eta();
+          genMuMuY = MuMu.Rapidity();
+          genMuMuPhi = MuMu.Phi();
+          genMuMuPt = MuMu.Pt();
+
+          genMuDeta = genMuEta1 - genMuEta2;
+          genMuDphi = DeltaPhi(genMuPhi1, genMuPhi2);
+          genMuDR = sqrt(genMuDeta * genMuDeta + genMuDphi * genMuDphi);
+        } // end if dimuon pair found
+        }
+	          MMuMuJet.genIsMuMuTagged->push_back(genIsJetMuonTagged);
+                  MMuMuJet.genMuMuMass->push_back(genMuMuMass);
+                  MMuMuJet.genMuMuPt->push_back  (genMuMuPt);
+                  MMuMuJet.genMuMuPhi->push_back (genMuMuPhi);
+                  MMuMuJet.genMuMuEta->push_back (genMuMuEta);
+                  MMuMuJet.genMuMuY->push_back   (genMuMuY);
+
+                  MMuMuJet.genMuPt1->push_back(genMuPt1);
+                  MMuMuJet.genMuPt2->push_back(genMuPt2);
+                  MMuMuJet.genMuEta1->push_back(genMuEta1);
+                  MMuMuJet.genMuEta2->push_back(genMuEta2);
+                  MMuMuJet.genMuPhi1->push_back(genMuPhi1);
+                  MMuMuJet.genMuPhi2->push_back(genMuPhi2);
+
+                  double genDeltaMuEta = MMu.GenEta[maxMu1Index] - MMu.GenEta[maxMu2Index];
+                  double genDeltaMuPhi = PhiRangePositive(DeltaPhi(MMu.GenPhi[maxMu1Index], MMu.GenPhi[maxMu2Index]));
+
+                  MMuMuJet.genMuDeta->push_back(genDeltaMuEta);
+                  MMuMuJet.genMuDphi->push_back(genDeltaMuPhi);
+                  MMuMuJet.genMuDR->push_back(sqrt(genDeltaMuEta * genDeltaMuEta + genDeltaMuPhi * genDeltaMuPhi));
+          
+         
+
+
          ///////////////////////////////
          ////////// Muon correction weights //////////
          ///////////////////////////////
 
-         if( isJetTagged == true)
-         {
-		 double Centrality = MMuMuJet.hiBin*0.5;
+//         if( isJetTagged == true)
+//         {
+//		 double Centrality = MMuMuJet.hiBin*0.5;
+
                   MMuMuJet.ExtraMuWeight[0] =
+                     tnp_weight_trk_pbpb(muEta1, 0)
+                     *tnp_weight_trk_pbpb(muEta2, 0)
+                     *tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     *tnp_weight_muid_pbpb(muPt2, muEta2, 0);
+                 cout <<                      tnp_weight_trk_pbpb(muEta1, 0)
+                     *tnp_weight_trk_pbpb(muEta2, 0)
+                     *tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     *tnp_weight_muid_pbpb(muPt2, muEta2, 0) << endl; 
+
+                  MMuMuJet.ExtraMuWeight[1] =
                      tnp_weight_trk_pbpb(muEta1, -1)
                      / tnp_weight_trk_pbpb(muEta1, 0)
                      * tnp_weight_trk_pbpb(muEta2, -1)
                      / tnp_weight_trk_pbpb(muEta2, 0);
-                  MMuMuJet.ExtraMuWeight[1] =
+                  MMuMuJet.ExtraMuWeight[2] =
                      tnp_weight_trk_pbpb(muEta1, -2)
                      / tnp_weight_trk_pbpb(muEta1, 0)
                      * tnp_weight_trk_pbpb(muEta2, -2)
                      / tnp_weight_trk_pbpb(muEta2, 0);
-                  MMuMuJet.ExtraMuWeight[2] =
-                     tnp_weight_muid_pbpb(muEta1, -1)
-                     / tnp_weight_muid_pbpb(muEta1, 0)
-                     * tnp_weight_muid_pbpb(muEta2, -1)
-                     / tnp_weight_muid_pbpb(muEta2, 0);
                   MMuMuJet.ExtraMuWeight[3] =
-                     tnp_weight_muid_pbpb(muEta1, -2)
-                     / tnp_weight_muid_pbpb(muEta1, 0)
-                     * tnp_weight_muid_pbpb(muEta2, -2)
-                     / tnp_weight_muid_pbpb(muEta2, 0);
+                     tnp_weight_muid_pbpb(muPt1, muEta1, -1)
+                     / tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     * tnp_weight_muid_pbpb(muPt2, muEta2, -1)
+                     / tnp_weight_muid_pbpb(muPt2, muEta2, 0);
                   MMuMuJet.ExtraMuWeight[4] =
+                     tnp_weight_muid_pbpb(muPt1, muEta1, -2)
+                     / tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     * tnp_weight_muid_pbpb(muPt2, muEta2, -2)
+                     / tnp_weight_muid_pbpb(muPt2, muEta2, 0);
+                  MMuMuJet.ExtraMuWeight[5] =
                      tnp_weight_trg_pbpb(muPt1, muEta1, -1)
 		     / tnp_weight_trg_pbpb(muPt1, muEta1, 0)
                      * tnp_weight_trg_pbpb(muPt2, muEta2, -1)
 		     / tnp_weight_trg_pbpb(muPt2, muEta2, 0);
 
-                  MMuMuJet.ExtraMuWeight[5] =
+                  MMuMuJet.ExtraMuWeight[6] =
                      tnp_weight_trg_pbpb(muPt1, muEta1, -2)
 		     / tnp_weight_trg_pbpb(muPt1, muEta1, 0)
                      * tnp_weight_trg_pbpb(muPt2, muEta2, -2)
 		     / tnp_weight_trg_pbpb(muPt2, muEta2,0);
 
-                  MMuMuJet.ExtraMuWeight[6] =
+                  MMuMuJet.ExtraMuWeight[7] =
                      tnp_weight_trk_pbpb(muEta1, 1)
                      / tnp_weight_trk_pbpb(muEta1,  0)
                      * tnp_weight_trk_pbpb(muEta2,  1)
                      / tnp_weight_trk_pbpb(muEta2,  0);
 
-                  MMuMuJet.ExtraMuWeight[7] =
+                  MMuMuJet.ExtraMuWeight[8] =
                      tnp_weight_trk_pbpb(muEta1,  2)
                      / tnp_weight_trk_pbpb(muEta1,  0)
                      * tnp_weight_trk_pbpb(muEta2,  2)
                      / tnp_weight_trk_pbpb(muEta2,  0);
-                  MMuMuJet.ExtraMuWeight[8] =
-                     tnp_weight_muid_pbpb(muEta1, 1)
-                     / tnp_weight_muid_pbpb(muEta1, 0)
-                     * tnp_weight_muid_pbpb(muEta2, 1)
-                     / tnp_weight_muid_pbpb(muEta2, 0);
                   MMuMuJet.ExtraMuWeight[9] =
-                     tnp_weight_muid_pbpb(muEta1, 2)
-                     / tnp_weight_muid_pbpb(muEta1, 0)
-                     * tnp_weight_muid_pbpb(muEta2, 2)
-                     / tnp_weight_muid_pbpb(muEta2, 0);
-
-
+                     tnp_weight_muid_pbpb(muPt1, muEta1, 1)
+                     / tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     * tnp_weight_muid_pbpb(muPt2, muEta2, 1)
+                     / tnp_weight_muid_pbpb(muPt2, muEta2, 0);
                   MMuMuJet.ExtraMuWeight[10] =
+                     tnp_weight_muid_pbpb(muPt1, muEta1, 2)
+                     / tnp_weight_muid_pbpb(muPt1, muEta1, 0)
+                     * tnp_weight_muid_pbpb(muPt2, muEta2, 2)
+                     / tnp_weight_muid_pbpb(muPt2, muEta2, 0);
+
+
+                  MMuMuJet.ExtraMuWeight[11] =
                      tnp_weight_trg_pbpb(muPt1, muEta1, 1)
 		     / tnp_weight_trg_pbpb(muPt1, muEta1, 0)
                      * tnp_weight_trg_pbpb(muPt2, muEta2, 1)
 		     / tnp_weight_trg_pbpb(muPt2, muEta2,0);
 
-                  MMuMuJet.ExtraMuWeight[4] =
+                  MMuMuJet.ExtraMuWeight[12] =
                      tnp_weight_trg_pbpb(muPt1, muEta1, 2)
 		     / tnp_weight_trg_pbpb(muPt1, muEta1, 0)
                      * tnp_weight_trg_pbpb(muPt2, muEta2, 2)
 		     / tnp_weight_trg_pbpb(muPt2, muEta2,0);
 
-         } 
+       
+		  // Ncoll weight
+		  // pThat
+                  MMuMuJet.PTHat = MJet.PTHat;
+	  	  MMuMuJet.NCollWeight = FindNColl(MMuMuJet.hiBin);
+//         } 
 
       } // end loop over jets
       MMuMuJet.FillEntry();
